@@ -1,11 +1,24 @@
-#include "Socket.h"
+#include "socket.h"
+#include "config.h"
 #include <process.h>
 #include <iostream>
 #include <string>
 #include <list>
 #include <map>
 
-#include "config.h"
+void initialize()
+{
+	s_mapRequestTypes["REQ"] = Request;
+	s_mapRequestTypes["SND"] = Send;
+	s_mapRequestTypes["GET"] = Get;
+	s_mapRequestTypes["SET"] = Set;
+
+	s_mapRequestCommands["CONTACTS"] = Contacts;
+	s_mapRequestCommands["STATUS"] = Status;
+	s_mapRequestCommands["NICKNAME"] = Nickname;
+	s_mapRequestCommands["JOIN"] = Join;
+	s_mapRequestCommands["LEAVE"] = Leave;
+}
 
 typedef std::list<Socket*> socket_list;
 
@@ -88,18 +101,4 @@ int main()
 	}
 
 	return 0;
-}
-
-void initialize()
-{
-	s_mapRequestTypes["REQ"] = Request;
-	s_mapRequestTypes["SND"] = Send;
-	s_mapRequestTypes["GET"] = Get;
-	s_mapRequestTypes["SET"] = Set;
-
-	s_mapRequestCommands["CONTACTS"] = Contacts;
-	s_mapRequestCommands["STATUS"] = Status;
-	s_mapRequestCommands["NICKNAME"] = Nickname;
-	s_mapRequestCommands["JOIN"] = Join;
-	s_mapRequestCommands["LEAVE"] = Leave;
 }
