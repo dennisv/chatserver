@@ -151,6 +151,8 @@ std::string Socket::ReceiveLine() {
 std::string Socket::ReceiveToChar(const char c) {
 	std::string ret;
 	while (1) {
+		char r;
+
 		switch(recv(s_, &r, 1, 0)) {
 			case 0: // not connected anymore;
 				return ret;

@@ -1,16 +1,16 @@
 const char DELIMITER = 3;
 
-static enum RequestTypes {
+enum RequestTypes {
 	Request,
 	Send,
 	Get,
 	Set
-}
+};
 
-static enum RequestCommands {
+enum RequestCommands {
 	Contacts,
 	Status,
 	Nickname,
 	Join,
 	Leave
-}
+};
