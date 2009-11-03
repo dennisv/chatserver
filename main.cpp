@@ -6,7 +6,12 @@
 #include <list>
 #include <map>
 
-void initialize()
+typedef std::list<Socket*> socket_list;
+
+static std::map<std::string, RequestTypes> s_mapRequestTypes;
+static std::map<std::string, RequestCommands> s_mapRequestCommands;
+
+static void initialize()
 {
 	s_mapRequestTypes["REQ"] = Request;
 	s_mapRequestTypes["SND"] = Send;
@@ -19,11 +24,6 @@ void initialize()
 	s_mapRequestCommands["JOIN"] = Join;
 	s_mapRequestCommands["LEAVE"] = Leave;
 }
-
-typedef std::list<Socket*> socket_list;
-
-static std::map<std::string, RequestTypes> s_mapRequestTypes;
-static std::map<std::string, RequestCommands> s_mapRequestCommands;
 
 socket_list g_connections;
 socket_list g_clients;
@@ -61,7 +61,7 @@ unsigned __stdcall Connection(void* a)
 		requestValues = r.substr(pos, r.length());
 		std::cout << requestType << requestCommand << requestValues << '\n';
 
-		switch(r)
+		switch(s_mapRequestTypes[requestType])
 		{
 			/*case "REQ":
 				// TODO: Check if ip already exists in socket_list
