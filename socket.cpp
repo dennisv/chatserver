@@ -174,6 +174,11 @@ void Socket::SendBytes(const std::string& s) {
 	send(s_,s.c_str(),s.length(),0);
 }
 
+void Socket::SendDelimiter(std::string s, const char d) {
+	s += d;
+	send(s_,s.c_str(),s.length(),0);
+}
+
 SocketServer::SocketServer(int port, int connections, TypeSocket type) {
 	sockaddr_in sa;
 

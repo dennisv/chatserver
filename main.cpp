@@ -1,4 +1,5 @@
 #include "Socket.h"
+#include "imexplode.h"
 #include "config.h"
 #include <process.h>
 #include <iostream>
@@ -34,6 +35,10 @@ unsigned __stdcall Connection(void* a)
 
 	g_connections.push_back(s);
 
+	std::cout << "Connected" << '\n';
+
+	s->SendDelimiter("XML <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts><contact ip=\"127.0.0.1\" name=\"Jordi\" status=\"online\" /></contacts>", DELIMITER);
+
 	while (1)
 	{
 		std::string r = s->ReceiveToChar(DELIMITER);
@@ -43,33 +48,29 @@ unsigned __stdcall Connection(void* a)
 		std::string requestCommand;
 		std::string requestValues;
 
-		std::string::size_type prev_pos = 0, pos = 0;
-		int i = 0;
-		while( (pos = r.find(' ', pos)) != std::string::npos )
-		{
-			std::string word( r.substr(prev_pos, pos - prev_pos) );
-			if(i == 0)
-				requestType = word;
-			else if(i == 1)
-			{
-				requestCommand = word;
-				break;
-			}
-			prev_pos = ++pos;
-			i++;
+		std::vector<std::string> commands = explode(' ', r);
+		if(commands.size() < 2) {
+			s->SendDelimiter("ERR unknown command", DELIMITER);
+			continue;
 		}
-		requestValues = r.substr(pos, r.length());
+		requestType = commands[0];
+		commands.erase(commands.begin());
+		requestCommand = commands[0];
+		commands.erase(commands.begin());
+		requestValues = implode(' ', commands);
+
 		std::cout << requestType << requestCommand << requestValues << '\n';
 
+		std::cout << r << '\n';
 		switch(s_mapRequestTypes[requestType])
 		{
-			/*case "REQ":
+			case Request:
 				// TODO: Check if ip already exists in socket_list
 				s->SendBytes("OK" + DELIMITER);
 				break;
 			default:
-				s->SendBytes("ERR unkown command" + DELIMITER);
-				break;*/
+				s->SendDelimiter("ERR unknown command", DELIMITER);
+				break;
 		}
 
 		for (socket_list::iterator os = g_connections.begin();

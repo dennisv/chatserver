@@ -22,10 +22,10 @@ LDFLAGS = -L"D:\MinGW\lib" -lstdc++ -lWs2_32
 RM = del
 
 # List your object files here
-OBJS = main.o socket.o
+OBJS = main.o socket.o imexplode.o
 
 # List your source files here
-SRCS = main.cpp socket.cpp
+SRCS = main.cpp socket.cpp imexplode.cpp
 
 # Define your compile target here.
 PROG = ChatServer.exe

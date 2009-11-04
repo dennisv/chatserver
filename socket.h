@@ -54,6 +54,7 @@ class Socket {
 		// because SendBytes does not modify the std::string passed 
 		// (in contrast to SendLine).
 		void   SendBytes(const std::string&);
+		void   SendDelimiter(std::string, const char);
 
 	protected:
 		friend class SocketServer;
