@@ -179,6 +179,9 @@ void Socket::SendDelimiter(std::string s, const char d) {
 	send(s_,s.c_str(),s.length(),0);
 }
 
+std::string Socket::Address() {
+}
+
 SocketServer::SocketServer(int port, int connections, TypeSocket type) {
 	sockaddr_in sa;
 

@@ -56,6 +56,8 @@ class Socket {
 		void   SendBytes(const std::string&);
 		void   SendDelimiter(std::string, const char);
 
+		std::string Address();
+
 	protected:
 		friend class SocketServer;
 		friend class SocketSelect;

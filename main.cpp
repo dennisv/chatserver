@@ -37,7 +37,7 @@ unsigned __stdcall Connection(void* a)
 
 	std::cout << "Connected" << '\n';
 
-	s->SendDelimiter("XML <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts><contact ip=\"127.0.0.1\" name=\"Jordi\" status=\"online\" /></contacts>", DELIMITER);
+	s->SendDelimiter("XML <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts><contact ip=\"127.0.0.1\" name=\"Jordi\" status=\"online\" /><contact ip=\"127.0.0.2\" name=\"Rein\" status=\"online\" /></contacts>", DELIMITER);
 
 	while (1)
 	{
