@@ -180,6 +180,11 @@ void Socket::SendDelimiter(std::string s, const char d) {
 }
 
 std::string Socket::Address() {
+	struct sockaddr_in addr;
+	int addrlen;
+	addrlen = sizeof(addr);
+	int r = getpeername(s_, (struct sockaddr *)&addr, &addrlen);
+	return inet_ntoa(addr.sin_addr);
 }
 
 SocketServer::SocketServer(int port, int connections, TypeSocket type) {

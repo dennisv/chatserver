@@ -7,10 +7,29 @@
 #include <list>
 #include <map>
 
+struct chatclient
+{
+	std::string address;
+	std::string nickname;
+	std::string status;
+
+	chatclient(std::string a, std::string n, std::string s)
+	{
+		address = a;
+		nickname = n;
+		status = s;
+	}
+	chatclient() { }
+};
+
 typedef std::list<Socket*> socket_list;
+typedef std::map<std::string, struct chatclient*> client_list;
 
 static std::map<std::string, RequestTypes> s_mapRequestTypes;
 static std::map<std::string, RequestCommands> s_mapRequestCommands;
+
+socket_list g_connections;
+client_list g_clients;
 
 static void initialize()
 {
@@ -26,18 +45,37 @@ static void initialize()
 	s_mapRequestCommands["LEAVE"] = Leave;
 }
 
-socket_list g_connections;
-socket_list g_clients;
+static void printEvent(struct chatclient* c, std::string text)
+{
+	std::string clientname;
+	clientname = c->address;
+	if(c->nickname != "")
+		clientname += " (" + c->nickname + ")";
+	std::string out = clientname + " " + text;
+	std::cout << out << std::endl;
+}
+
+static bool isClient(std::string address)
+{
+	return g_clients.find(address) != g_clients.end();
+}
+
+static std::string rtrim(std::string in)
+{
+	return in.erase(in.find_last_not_of(" \t\r\n") + 1);
+}
 
 unsigned __stdcall Connection(void* a)
 {
 	Socket* s = (Socket*) a;
+	std::string address;
 
 	g_connections.push_back(s);
 
-	std::cout << "Connected" << '\n';
+	address = s->Address();
+	std::cout << address + " Connected" << std::endl;
 
-	s->SendDelimiter("XML <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts><contact ip=\"127.0.0.1\" name=\"Jordi\" status=\"online\" /><contact ip=\"127.0.0.2\" name=\"Rein\" status=\"online\" /></contacts>", DELIMITER);
+	s->SendDelimiter("XML <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts><contact ip=\"192.168.10.27\" name=\"Rein\" status=\"online\" /><contact ip=\"192.168.10.31\" name=\"Nico\" status=\"online\" /></contacts>", DELIMITER);
 
 	while (1)
 	{
@@ -53,34 +91,129 @@ unsigned __stdcall Connection(void* a)
 			s->SendDelimiter("ERR unknown command", DELIMITER);
 			continue;
 		}
-		requestType = commands[0];
+		requestType = rtrim(commands[0]);
 		commands.erase(commands.begin());
-		requestCommand = commands[0];
+		requestCommand = rtrim(commands[0]);
 		commands.erase(commands.begin());
-		requestValues = implode(' ', commands);
+		requestValues = rtrim(implode(' ', commands));
 
-		std::cout << requestType << requestCommand << requestValues << '\n';
+		bool hasValue = requestValues.length() > 0;
 
-		std::cout << r << '\n';
+		std::cout << "-- DEBUG: <" + requestType + "> <" + requestCommand + "> <" + requestValues + ">" << std::endl;
 		switch(s_mapRequestTypes[requestType])
 		{
 			case Request:
-				// TODO: Check if ip already exists in socket_list
-				s->SendBytes("OK" + DELIMITER);
+				switch(s_mapRequestCommands[requestCommand])
+				{
+					case Join:
+						if(!isClient(address))
+						{
+							g_clients[address] = new chatclient(address, "", "");
+							s->SendDelimiter("OK", DELIMITER);
+							printEvent(g_clients[address], "joined contactlist");
+						}
+						else
+						{
+							std::cout << address + " tried to connect again" << std::endl;
+							s->SendDelimiter("ERR already connected", DELIMITER);
+							s->Close();
+							g_connections.remove(s);
+							delete s;
+							return 0;
+						}
+						break;
+					default:
+						s->SendDelimiter("ERR unknown command (" + requestCommand + ")", DELIMITER);
+						break;
+				}
+				break;
+			case Get:
+				switch(s_mapRequestCommands[requestCommand])
+				{
+					case Contacts:
+					{
+						if(!isClient(address))
+						{
+							s->SendDelimiter("ERR need to join first", DELIMITER);
+							break;
+						}
+						std::string contacts = "XML <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts>";
+						for(std::map<std::string, struct chatclient*>::const_iterator ic = g_clients.begin();
+								ic != g_clients.end();
+								ic++)
+						{
+							std::string name = ic->second->nickname;
+							if(ic->second->nickname == "")
+								name = ic->second->address;
+							if(ic->second->address != address)
+								contacts += "<contact ip=\"" + ic->second->address + "\" name=\"" + name + "\" status=\"" + ic->second->status + "\" />";
+						}
+						contacts += "</contacts>";
+						s->SendDelimiter(contacts, DELIMITER);
+						printEvent(g_clients[address], "requested contactlist");
+					}
+					break;
+					default:
+						s->SendDelimiter("ERR unknown command (" + requestCommand + ")", DELIMITER);
+						break;
+				}
+				break;
+			case Set:
+				switch(s_mapRequestCommands[requestCommand])
+				{
+					case Nickname:
+						if(!isClient(address))
+						{
+							s->SendDelimiter("ERR need to join first", DELIMITER);
+							break;
+						}
+						if(hasValue)
+						{
+							g_clients[address]->nickname = requestValues;
+							s->SendDelimiter("OK", DELIMITER);
+							printEvent(g_clients[address], "sent nickname");
+						}
+						break;
+					case Status:
+						if(!isClient(address))
+						{
+							s->SendDelimiter("ERR need to join first", DELIMITER);
+							break;
+						}
+						if (hasValue)
+						{
+							g_clients[address]->status = requestValues;
+							s->SendDelimiter("OK", DELIMITER);
+							printEvent(g_clients[address], "sent status");
+						}
+						break;
+					default:
+						s->SendDelimiter("ERR unknown command (" + requestCommand + ")", DELIMITER);
+						break;
+				}
+				break;
+			case Send:
+				switch(s_mapRequestCommands[requestCommand])
+				{
+					case Leave:
+						if(isClient(address))
+						{
+							printEvent(g_clients[address], "sent leave");
+							g_clients.erase(address);
+						}
+						s->Close();
+						g_connections.remove(s);
+						delete s;
+						return 0;
+				}
 				break;
 			default:
-				s->SendDelimiter("ERR unknown command", DELIMITER);
+				s->SendDelimiter("ERR unknown command (" + requestType + ")", DELIMITER);
 				break;
-		}
-
-		for (socket_list::iterator os = g_connections.begin();
-				os!=g_connections.end(); 
-				os++)
-		{
-			if (*os != s) (*os)->SendLine(r);
 		}
 	}
 
+	g_clients.erase(address);
 	g_connections.remove(s);
 
 	delete s;
@@ -93,6 +226,7 @@ int main()
 	initialize();
 
 	SocketServer in(5776, 50);
+	std::cout << "Server started and listening on port 5776" << std::endl;
 
 	while (1) {
 		Socket* s = in.Accept();
