@@ -1,4 +1,4 @@
-const char DELIMITER = '\n';
+const char DELIMITER = 3;
 
 enum RequestTypes {
 	Request,

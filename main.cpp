@@ -60,6 +60,23 @@ static bool isClient(std::string address)
 	return g_clients.find(address) != g_clients.end();
 }
 
+static std::string getContactList(std::string address)
+{
+	std::string contacts = "XML <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts>";
+	for(std::map<std::string, struct chatclient*>::const_iterator ic = g_clients.begin();
+			ic != g_clients.end();
+			ic++)
+	{
+		std::string name = ic->second->nickname;
+		if(ic->second->nickname == "")
+			name = ic->second->address;
+		if(ic->second->address != address)
+			contacts += "<contact ip=\"" + ic->second->address + "\" name=\"" + name + "\" status=\"" + ic->second->status + "\" />";
+	}
+	contacts += "</contacts>";
+	return contacts;
+}
+
 static std::string rtrim(std::string in)
 {
 	return in.erase(in.find_last_not_of(" \t\r\n") + 1);
@@ -75,13 +92,12 @@ unsigned __stdcall Connection(void* a)
 	address = s->Address();
 	std::cout << address + " Connected" << std::endl;
 
-	s->SendDelimiter("XML <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts><contact ip=\"192.168.10.27\" name=\"Rein\" status=\"online\" /><contact ip=\"192.168.10.31\" name=\"Nico\" status=\"online\" /></contacts>", DELIMITER);
-
 	while (1)
 	{
 		std::string r = s->ReceiveToChar(DELIMITER);
 		if (r.empty()) break;
 
+		r = rtrim(r);
 		std::string requestType;
 		std::string requestCommand;
 		std::string requestValues;
@@ -91,11 +107,11 @@ unsigned __stdcall Connection(void* a)
 			s->SendDelimiter("ERR unknown command", DELIMITER);
 			continue;
 		}
-		requestType = rtrim(commands[0]);
+		requestType = commands[0];
 		commands.erase(commands.begin());
-		requestCommand = rtrim(commands[0]);
+		requestCommand = commands[0];
 		commands.erase(commands.begin());
-		requestValues = rtrim(implode(' ', commands));
+		requestValues = implode(' ', commands);
 
 		bool hasValue = requestValues.length() > 0;
 
@@ -111,6 +127,11 @@ unsigned __stdcall Connection(void* a)
 							g_clients[address] = new chatclient(address, "", "");
 							s->SendDelimiter("OK", DELIMITER);
 							printEvent(g_clients[address], "joined contactlist");
+
+							std::string contacts;
+							contacts = getContactList(address);
+							s->SendDelimiter(contacts, DELIMITER);
+							printEvent(g_clients[address], "sent contactlist");
 						}
 						else
 						{
@@ -137,18 +158,8 @@ unsigned __stdcall Connection(void* a)
 							s->SendDelimiter("ERR need to join first", DELIMITER);
 							break;
 						}
-						std::string contacts = "XML <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts>";
-						for(std::map<std::string, struct chatclient*>::const_iterator ic = g_clients.begin();
-								ic != g_clients.end();
-								ic++)
-						{
-							std::string name = ic->second->nickname;
-							if(ic->second->nickname == "")
-								name = ic->second->address;
-							if(ic->second->address != address)
-								contacts += "<contact ip=\"" + ic->second->address + "\" name=\"" + name + "\" status=\"" + ic->second->status + "\" />";
-						}
-						contacts += "</contacts>";
+						std::string contacts;
+						contacts = getContactList(address);
 						s->SendDelimiter(contacts, DELIMITER);
 						printEvent(g_clients[address], "requested contactlist");
 					}
@@ -171,7 +182,7 @@ unsigned __stdcall Connection(void* a)
 						{
 							g_clients[address]->nickname = requestValues;
 							s->SendDelimiter("OK", DELIMITER);
-							printEvent(g_clients[address], "sent nickname");
+							printEvent(g_clients[address], "set nickname");
 						}
 						break;
 					case Status:
@@ -184,7 +195,7 @@ unsigned __stdcall Connection(void* a)
 						{
 							g_clients[address]->status = requestValues;
 							s->SendDelimiter("OK", DELIMITER);
-							printEvent(g_clients[address], "sent status");
+							printEvent(g_clients[address], "set status");
 						}
 						break;
 					default:
