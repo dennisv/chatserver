@@ -62,7 +62,7 @@ static bool isClient(std::string address)
 
 static std::string getContactList(std::string address)
 {
-	std::string contacts = "XML <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts>";
+	std::string contacts = "XML LST <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts>";
 	for(std::map<std::string, struct chatclient*>::const_iterator ic = g_clients.begin();
 			ic != g_clients.end();
 			ic++)
@@ -104,7 +104,7 @@ unsigned __stdcall Connection(void* a)
 
 		std::vector<std::string> commands = explode(' ', r);
 		if(commands.size() < 2) {
-			s->SendDelimiter("ERR unknown command", DELIMITER);
+			s->SendDelimiter("ERR 404 unknown command", DELIMITER);
 			continue;
 		}
 		requestType = commands[0];
@@ -136,7 +136,7 @@ unsigned __stdcall Connection(void* a)
 						else
 						{
 							std::cout << address + " tried to connect again" << std::endl;
-							s->SendDelimiter("ERR already connected", DELIMITER);
+							s->SendDelimiter("ERR 401 already connected", DELIMITER);
 							s->Close();
 							g_connections.remove(s);
 							delete s;
@@ -144,7 +144,7 @@ unsigned __stdcall Connection(void* a)
 						}
 						break;
 					default:
-						s->SendDelimiter("ERR unknown command (" + requestCommand + ")", DELIMITER);
+						s->SendDelimiter("ERR 404 unknown command (" + requestCommand + ")", DELIMITER);
 						break;
 				}
 				break;
@@ -155,7 +155,7 @@ unsigned __stdcall Connection(void* a)
 					{
 						if(!isClient(address))
 						{
-							s->SendDelimiter("ERR need to join first", DELIMITER);
+							s->SendDelimiter("ERR 405 need to join first", DELIMITER);
 							break;
 						}
 						std::string contacts;
@@ -165,7 +165,7 @@ unsigned __stdcall Connection(void* a)
 					}
 					break;
 					default:
-						s->SendDelimiter("ERR unknown command (" + requestCommand + ")", DELIMITER);
+						s->SendDelimiter("ERR 404 unknown command (" + requestCommand + ")", DELIMITER);
 						break;
 				}
 				break;
@@ -175,7 +175,7 @@ unsigned __stdcall Connection(void* a)
 					case Nickname:
 						if(!isClient(address))
 						{
-							s->SendDelimiter("ERR need to join first", DELIMITER);
+							s->SendDelimiter("ERR 403 need to join first", DELIMITER);
 							break;
 						}
 						if(hasValue)
@@ -188,7 +188,7 @@ unsigned __stdcall Connection(void* a)
 					case Status:
 						if(!isClient(address))
 						{
-							s->SendDelimiter("ERR need to join first", DELIMITER);
+							s->SendDelimiter("ERR 402 need to join first", DELIMITER);
 							break;
 						}
 						if (hasValue)
@@ -199,7 +199,7 @@ unsigned __stdcall Connection(void* a)
 						}
 						break;
 					default:
-						s->SendDelimiter("ERR unknown command (" + requestCommand + ")", DELIMITER);
+						s->SendDelimiter("ERR 404 unknown command (" + requestCommand + ")", DELIMITER);
 						break;
 				}
 				break;
@@ -219,7 +219,7 @@ unsigned __stdcall Connection(void* a)
 				}
 				break;
 			default:
-				s->SendDelimiter("ERR unknown command (" + requestType + ")", DELIMITER);
+				s->SendDelimiter("ERR 404 unknown command (" + requestType + ")", DELIMITER);
 				break;
 		}
 	}
