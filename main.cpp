@@ -115,7 +115,7 @@ unsigned __stdcall Connection(void* a)
 
 		bool hasValue = requestValues.length() > 0;
 
-		std::cout << "-- DEBUG: <" + requestType + "> <" + requestCommand + "> <" + requestValues + ">" << std::endl;
+		std::cout << "-- DEBUG: " + address + " <" + requestType + "> <" + requestCommand + "> <" + requestValues + ">" << std::endl;
 		switch(s_mapRequestTypes[requestType])
 		{
 			case Request:
@@ -124,7 +124,7 @@ unsigned __stdcall Connection(void* a)
 					case Join:
 						if(!isClient(address))
 						{
-							g_clients[address] = new chatclient(address, "", "");
+							g_clients[address] = new chatclient(address, "", "online");
 							s->SendDelimiter("OK", DELIMITER);
 							printEvent(g_clients[address], "joined contactlist");
 
@@ -224,6 +224,7 @@ unsigned __stdcall Connection(void* a)
 		}
 	}
 
+	std::cout << address + " disconnected" << std::endl;
 	g_clients.erase(address);
 	g_connections.remove(s);
 
