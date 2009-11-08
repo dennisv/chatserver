@@ -77,6 +77,30 @@ static std::string getContactList(std::string address)
 	return contacts;
 }
 
+static void contactChanges(std::string address, std::string type, const client_list& clients)
+{
+	std::string contacts = "XML " + type + " <?xml version=\"1.0\" encoding=\"UTF-8\"?><contacts>";
+	for(std::map<std::string, struct chatclient*>::const_iterator ic = clients.begin();
+			ic != clients.end();
+			ic++)
+	{
+		std::string name = ic->second->nickname;
+		if(ic->second->nickname == "")
+			name = ic->second->address;
+		contacts += "<contact ip=\"" + ic->second->address + "\" name=\"" + name + "\" status=\"" + ic->second->status + "\" />";
+	}
+	contacts += "</contacts>";
+	for(std::list<Socket*>::const_iterator ic = g_connections.begin();
+			ic != g_connections.end();
+			ic++)
+	{
+		if(!isClient((*ic)->Address()))
+			continue;
+		if((*ic)->Address() != address)
+			(*ic)->SendDelimiter(contacts, DELIMITER);
+	}
+}
+
 static std::string rtrim(std::string in)
 {
 	return in.erase(in.find_last_not_of(" \t\r\n") + 1);
@@ -127,6 +151,10 @@ unsigned __stdcall Connection(void* a)
 							g_clients[address] = new chatclient(address, "", "online");
 							s->SendDelimiter("OK", DELIMITER);
 							printEvent(g_clients[address], "joined contactlist");
+
+							client_list change_list;
+							change_list[address] = g_clients[address];
+							contactChanges(address, "ADD", change_list);
 
 							std::string contacts;
 							contacts = getContactList(address);
@@ -183,6 +211,10 @@ unsigned __stdcall Connection(void* a)
 							g_clients[address]->nickname = requestValues;
 							s->SendDelimiter("OK", DELIMITER);
 							printEvent(g_clients[address], "set nickname");
+
+							client_list change_list;
+							change_list[address] = g_clients[address];
+							contactChanges(address, "UPD", change_list);
 						}
 						break;
 					case Status:
@@ -196,6 +228,10 @@ unsigned __stdcall Connection(void* a)
 							g_clients[address]->status = requestValues;
 							s->SendDelimiter("OK", DELIMITER);
 							printEvent(g_clients[address], "set status");
+							
+							client_list change_list;
+							change_list[address] = g_clients[address];
+							contactChanges(address, "UPD", change_list);
 						}
 						break;
 					default:
@@ -209,6 +245,10 @@ unsigned __stdcall Connection(void* a)
 					case Leave:
 						if(isClient(address))
 						{
+							client_list change_list;
+							change_list[address] = g_clients[address];
+							contactChanges(address, "DEL", change_list);
+
 							printEvent(g_clients[address], "sent leave");
 							g_clients.erase(address);
 						}
@@ -225,7 +265,14 @@ unsigned __stdcall Connection(void* a)
 	}
 
 	std::cout << address + " disconnected" << std::endl;
-	g_clients.erase(address);
+	if(isClient(address))
+	{
+		client_list change_list;
+		change_list[address] = g_clients[address];
+		contactChanges(address, "DEL", change_list);
+
+		g_clients.erase(address);
+	}
 	g_connections.remove(s);
 
 	delete s;
